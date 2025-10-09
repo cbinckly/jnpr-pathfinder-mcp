@@ -1,5 +1,5 @@
 [project]
-name = "jnpr-pathfinder-mcp"
+name = "jnpr_pathfinder_mcp"
 version = "0.1.0"
 description = "An MCP Server for interacting with Juniper's public Pathfinder APIs (https://apps.juniper.net)."
 readme = "README.md"
@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-jnpr-pathfinder-mcp = "jnpr_pathfinder_mcp.__main__:main"
+jnpr_pathfinder_mcp = "jnpr_pathfinder_mcp.__main__:main"
 
 [build-system]
 requires = ["uv_build>=0.8.2,<0.9.0"]
@@ -23,9 +23,13 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "poethepoet>=0.37.0",
+    "pyright>=1.1.406",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
     "pytest-cov>=7.0.0",
+    "pytest-timeout>=2.4.0",
+    "ruff>=0.14.0",
 ]
 
 [tool.pytest.ini_options]
@@ -40,3 +44,44 @@ addopts = """
     --cov-report=html
 """
 testpaths = ["tests"]
+timeout = 120
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100  # use whatever number makes you happy
+
+[tool.ruff.lint]
+select = [
+    "A",    # warn about shadowing built-ins
+    "E",    # style stuff, whitespaces
+    "F",    # important pyflakes lints
+    "I",    # import sorting
+    "N",    # naming
+    "T100", # breakpoints (probably don't want these in prod!)
+]
+# if you're feeling confident you can do:
+# select = ["ALL"]
+# and then manually ignore annoying ones:
+# ignore = [...]
+
+[tool.ruff.lint.per-file-ignores]
+# "jnpr_pathfinder_mcp/file.py" = ["E501"]
+
+[tool.ruff.lint.isort]
+# so it knows to group first-party stuff last
+known-first-party = ["jnpr_pathfinder_mcp"]
+
+[tool.pyright]
+venvPath = "."          # uv installs the venv in the current dir
+venv = ".venv"          #       in a folder called `.venv`
+strict = ["**/*.py"]    # use 'strict' checking on all files
+pythonVersion = "3.11"  # if library, specify the _lowest_ you support
+
+[tool.poe.tasks]
+# run with eg `uv run poe fmt`
+fmt = "ruff format"
+lint = "ruff check --fix"
+check = "pyright"
+test = "pytest"
+# run all the above
+all = [ {ref="fmt"}, {ref="lint"}, {ref="check"}, {ref="test"} ]

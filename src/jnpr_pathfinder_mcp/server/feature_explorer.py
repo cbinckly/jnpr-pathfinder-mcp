@@ -1,17 +1,17 @@
-import re
-import logging
-import requests
 import functools
-from bs4 import BeautifulSoup
-from pydantic import BaseModel
+import logging
+import re
 from typing import Annotated, Any, Optional
 
-from fastmcp import FastMCP # type: ignore
+import requests
+from bs4 import BeautifulSoup
+from fastmcp import FastMCP  # type: ignore
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
-file_handler = logging.FileHandler('/tmp/workspace.log')
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler = logging.FileHandler("/tmp/workspace.log")
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 file_handler.setFormatter(formatter)
 log.addHandler(file_handler)
 log.addHandler(logging.StreamHandler())
@@ -28,23 +28,32 @@ Typical usage would include:
     - Identifying whether a particular feature is supported on a given model/release combination.
 """
 
-mcp = FastMCP(name="Juniper JUNOS Command Line Interface Explorer",
-              instructions=INSTRUCTIONS)
+mcp = FastMCP(name="Juniper JUNOS Command Line Interface Explorer", instructions=INSTRUCTIONS)
+
+BASE_URL = "https://apps.juniper.net"
 
 URLS = {
-        "software_releases": "https://apps.juniper.net/feature-explorer/software-release", # "{software: "Junos OS"}"
-        "models_for_release": "https://apps.juniper.net/feature-explorer/getPlatformDetails.html?softwareName={junos_os_type}&version={version}", # ["Junos OS Evolved" | "Junos OS"]
-        "releases_for_model": "https://apps.juniper.net/feature-explorer/getReleasesToCompare.html?prodKey={product_key}",
-        "features_for_model": "https://apps.juniper.net/feature-explorer/getFeaturesForProductOnAReleaseAndSoftware.html", #{software: "Junos OS", release: "25.2R1", platform: "ACX710"}
-        "feature_tree": "https://apps.juniper.net/feature-explorer/getFeatureTree.html",
-        "feature_details": "https://apps.juniper.net/feature-explorer/getFeatureDetail/{feature_key}",
-        "product_keys": "https://apps.juniper.net/feature-explorer/select-platform.html"
+    "software_releases": "/feature-explorer/software-release",
+    "models_for_release": (
+        "/feature-explorer/getPlatformDetails.html?softwareName={junos_os_type}&version={version}"
+    ),
+    "releases_for_model": "/feature-explorer/getReleasesToCompare.html?prodKey={product_key}",
+    "features_for_model": "/feature-explorer/getFeaturesForProductOnAReleaseAndSoftware.html",
+    "feature_tree": "/feature-explorer/getFeatureTree.html",
+    "feature_details": "/feature-explorer/getFeatureDetail/{feature_key}",
+    "product_keys": "/feature-explorer/select-platform.html",
 }
+
+
+def _url_for(key):
+    return BASE_URL + URLS[key]
+
 
 class FeatureExplorerResponse(BaseModel):
     success: bool
     error: Optional[str] = None
     response: Optional[dict[str, Any] | list[dict[str, Any]]] = None
+
 
 ## Helpers for building the model catalog, which I can't find as JSON, so
 ## we scrape it out of the feature explorer landing page.
@@ -59,10 +68,15 @@ CATEGORIES = {
 }
 
 HEADERS = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+    ),
 }
 
 PID_RE = re.compile(r"pid-(\d+)")
+
+
 def _snake(to_convert: str) -> str:
     """Convert a label to a safe _snake_case key (lowercase, underscore)."""
     if not to_convert:
@@ -72,6 +86,7 @@ def _snake(to_convert: str) -> str:
     key = re.sub(r"_+", "_", key)  # collapse underscores
     key = key.strip("_").lower()
     return key or to_convert.lower()
+
 
 def _parse_page_html(html: str):
     """Extract the platform ids from the feature explorer landing page.
@@ -100,6 +115,7 @@ def _parse_page_html(html: str):
         log.info("_parse_age_html - extracted %s:%s:%s", family, platform, pid)
     return platforms
 
+
 @functools.lru_cache(maxsize=1)
 def _build_platform_catalog():
     """Get the feature explorer landing page for each category and parse it.
@@ -111,10 +127,12 @@ def _build_platform_catalog():
     for cat_key, cat_param in CATEGORIES.items():
         try:
             r = requests.get(
-                    URLS['product_keys'],
-                    params={"typ": "1", "category": cat_param},
-                    headers=HEADERS, timeout=15, verify=False
-                    )
+                _url_for("product_keys"),
+                params={"typ": "1", "category": cat_param},
+                headers=HEADERS,
+                timeout=15,
+                verify=False,
+            )
             r.raise_for_status()
             html = r.text
         except Exception as e:
@@ -123,54 +141,62 @@ def _build_platform_catalog():
 
         products = _parse_page_html(html)
 
-        log.info("_build_platform_catalogue - found %d entries in html [%d bytes] for %s.",
-                 len(products), len(html), cat_param)
+        log.info(
+            "_build_platform_catalogue - found %d entries in html [%d bytes] for %s.",
+            len(products),
+            len(html),
+            cat_param,
+        )
         for family, label, pid in products:
             catalog[_snake(label)] = {"family": _snake(family), "product_key": pid}
-            log.info("_build_platform_catalogue - adding %s:%s:%s",
-                     _snake(family), _snake(label), pid)
+            log.info(
+                "_build_platform_catalogue - adding %s:%s:%s", _snake(family), _snake(label), pid
+            )
 
     return catalog
+
 
 def _get_pid_for_model(model: str) -> int:
     catalog = _build_platform_catalog()
     log.info("_get_pid_for_model - searching for %s in %s", _snake(model), catalog.keys())
     if _snake(model) in catalog:
-        return catalog[_snake(model)]['product_key']
+        return catalog[_snake(model)]["product_key"]
 
     # handle the case where the model has extra suffixes: QFX5240-64OD-AFO
-    model_components = model.split('-')[:-1]
+    model_components = model.split("-")[:-1]
     while model_components:
         log.info("_get_pid_for_model - simplified_model %s", model_components)
-        _model = '-'.join(model_components)
+        _model = "-".join(model_components)
         if _snake(_model) in catalog:
-            return catalog[_snake(_model)]['product_key']
+            return catalog[_snake(_model)]["product_key"]
         model_components = model_components[:-1]
 
     # bail if we can't match it.
     log.error("_get_pid_for_model - failed to find pid for %s in %s", model, catalog.keys())
     raise ValueError(f"Failed to find matching model for {model}.")
 
+
 @mcp.tool
 def software_releases(
-            junos_os_type: Annotated[str, "One of ['Junos OS', 'Junos OS Evolved']"] = "Junos OS"
-        ) -> FeatureExplorerResponse:
+    junos_os_type: Annotated[str, "One of ['Junos OS', 'Junos OS Evolved']"] = "Junos OS",
+) -> FeatureExplorerResponse:
     """Fetch the list of all supported software releases.
 
     Arguments:
       junos_os_type: str - one of "Junos OS" or "Junos OS Evolved"
     """
     payload = {"software": junos_os_type}
-    response = requests.post(URLS['software_releases'], json=payload, verify=VERIFY_SSL)
+    response = requests.post(_url_for("software_releases"), json=payload, verify=VERIFY_SSL)
     if response.ok and len(response.content):
         return FeatureExplorerResponse(success=True, response=response.json())
     return FeatureExplorerResponse(success=False, error=response.text or "Empty response from API.")
 
+
 @mcp.tool
 def models_compatible_with_release(
-            junos_version: Annotated[str, "A JUNOS software version like 25.1R2"],
-            junos_os_type: Annotated[str, "One of ['Junos OS', 'Junos OS Evolved']"] = "Junos OS"
-        ) -> FeatureExplorerResponse:
+    junos_version: Annotated[str, "A JUNOS software version like 25.1R2"],
+    junos_os_type: Annotated[str, "One of ['Junos OS', 'Junos OS Evolved']"] = "Junos OS",
+) -> FeatureExplorerResponse:
     """Fetch the models supported for the given JUNOS OS type and version.
 
     Arguments:
@@ -178,56 +204,63 @@ def models_compatible_with_release(
       junos_version: str - software version, for example "25.2R1"
     """
     if junos_os_type not in ["Junos OS", "Junos OS Evolved"]:
-        raise ArgumentError("junos_os_type must be one of ['Junos OS', 'Junos OS Evolved']")
-    url = URLS['models_for_release'].format(junos_os_type=junos_os_type, version=junos_version)
+        raise ValueError("junos_os_type must be one of ['Junos OS', 'Junos OS Evolved']")
+    url = _url_for("models_for_release").format(junos_os_type=junos_os_type, version=junos_version)
     response = requests.get(url, verify=VERIFY_SSL)
     if response.ok and len(response.content):
         return FeatureExplorerResponse(success=True, response=response.json())
     return FeatureExplorerResponse(success=False, error=response.text or "Empty response from API.")
+
 
 @mcp.tool
 def releases_compatible_with_model(
-            model: Annotated[str, "A Juniper device model, like the ACX710."]
-        ) -> FeatureExplorerResponse:
+    model: Annotated[str, "A Juniper device model, like the ACX710."],
+) -> FeatureExplorerResponse:
     """Fetch the releases compatible with the given model."""
     product_key = _get_pid_for_model(model)
-    url = URLS['releases_for_model'].format(product_key=product_key)
+    url = _url_for("releases_for_model").format(product_key=product_key)
     response = requests.get(url, verify=VERIFY_SSL)
     if response.ok and len(response.content):
         return FeatureExplorerResponse(success=True, response=response.json())
     return FeatureExplorerResponse(success=False, error=response.text or "Empty response from API.")
 
+
 @mcp.tool
 def features_for_model_on_junos_version(
-            model: Annotated[str, "A Juniper device model, like the ACX710."],
-            junos_version: Annotated[str, "A JUNOS software version like 25.1R2"],
-            junos_os_type: Annotated[str, "One of ['Junos OS', 'Junos OS Evolved']"] = "Junos OS"
-        ) -> FeatureExplorerResponse:
+    model: Annotated[str, "A Juniper device model, like the ACX710."],
+    junos_version: Annotated[str, "A JUNOS software version like 25.1R2"],
+    junos_os_type: Annotated[str, "One of ['Junos OS', 'Junos OS Evolved']"] = "Junos OS",
+) -> FeatureExplorerResponse:
     """Fetch the features for a given model on a specific release."""
     payload = {"software": junos_os_type, "release": junos_version, "platform": model}
-    response = requests.post(URLS['features_for_model'], json=payload, verify=VERIFY_SSL)
+    response = requests.post(_url_for("features_for_model"), json=payload, verify=VERIFY_SSL)
     if response.ok and len(response.content):
         return FeatureExplorerResponse(success=True, response=response.json())
     return FeatureExplorerResponse(success=False, error=response.text or "Empty response from API.")
+
 
 @mcp.tool
 def feature_tree() -> FeatureExplorerResponse:
     """Fetch the feature tree, including all features and their keys."""
-    response = requests.get(URLS['feature_tree'], verify=VERIFY_SSL)
+    response = requests.get(_url_for("feature_tree"), verify=VERIFY_SSL)
     if response.ok and len(response.content):
         return FeatureExplorerResponse(success=True, response=response.json())
     return FeatureExplorerResponse(success=False, error=response.text or "Empty response from API.")
 
+
 @mcp.tool
 def feature_details(
-            feature_key: Annotated[str, "The unique alphanumeric key for the feature, can be found in feature tree."]
-        ) -> FeatureExplorerResponse:
+    feature_key: Annotated[
+        str, "The unique alphanumeric key for the feature, can be found in feature tree."
+    ],
+) -> FeatureExplorerResponse:
     """Fetch the details of a specific feature."""
-    url = URLS['feature_details'].format(feature_key=feature_key)
+    url = _url_for("feature_details").format(feature_key=feature_key)
     response = requests.get(url, verify=VERIFY_SSL)
     if response.ok and len(response.content):
         return FeatureExplorerResponse(success=True, response=response.json())
     return FeatureExplorerResponse(success=False, error=response.text or "Empty response from API.")
+
 
 @mcp.tool
 def product_keys() -> FeatureExplorerResponse:

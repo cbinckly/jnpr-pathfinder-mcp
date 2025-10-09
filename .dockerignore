@@ -1,0 +1,13 @@
+.DS_Store
+
+.coverage/
+htmlcov/
+.pytest_cache/
+
+.git/
+.gitignore
+.github/
+
+.venv/
+**/__pycache__/
+*.pyc

@@ -1,20 +1,21 @@
 import logging
-import requests
-from typing import Optional, Any
-from pydantic import BaseModel
+from typing import Any, Optional
 
-from fastmcp import FastMCP # type: ignore
+import requests
+from fastmcp import FastMCP  # type: ignore
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
-file_handler = logging.FileHandler('/tmp/workspace.log')
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler = logging.FileHandler("/tmp/workspace.log")
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 file_handler.setFormatter(formatter)
 log.addHandler(file_handler)
 
 INSTRUCTIONS = """
-Determine hardware compatibility and interoperability using the Juniper Networks Hardware Compatiblity Tool.
-You can retrieve detailed hardware information for Juniper products from the HCT.
+Determine hardware compatibility and interoperability using the Juniper Networks
+Hardware Compatiblity Tool. You can retrieve detailed hardware information for
+Juniper products from the HCT.
 
 These tools allow you to access the Hardware Compatibility Tool (HCT) API. A typical workflow is:
 
@@ -35,8 +36,7 @@ Juniper groups things in the following way:
 (common optics) can be used across different product families.
 """
 
-mcp = FastMCP(name="Juniper Hardware Compatibility Tool",
-              instructions=INSTRUCTIONS)
+mcp = FastMCP(name="Juniper Hardware Compatibility Tool", instructions=INSTRUCTIONS)
 
 URLS = {
     "categories": "https://apps.juniper.net/hct/allCategories",
@@ -47,15 +47,17 @@ URLS = {
     "platforms_grouped_by_family": "https://apps.juniper.net/hct/allPlatformsGroupByFamily",
     "platform_components": "https://apps.juniper.net/hct/modelsForProduct/{platform}",
     "platform_hardware_specification_detail": "https://apps.juniper.net/hardwaresrv/hct/specification-detail",
-    "platform_information": "https://apps.juniper.net/hct/productInfo/{platform}"
+    "platform_information": "https://apps.juniper.net/hct/productInfo/{platform}",
 }
 
 VERIFY_SSL = False
+
 
 class HctResponse(BaseModel):
     success: bool
     error: Optional[str] = None
     response: Optional[dict[str, Any] | list[dict[str, Any]]] = None
+
 
 @mcp.tool
 def categories() -> HctResponse:
@@ -63,7 +65,12 @@ def categories() -> HctResponse:
     response = requests.get(URLS["categories"], verify=VERIFY_SSL)
     if response.ok and len(response.content):
         return HctResponse(success=True, response=response.json())
-    return HctResponse(success=False, error=response.text or "Empty response from API. Check that component names and category ids are correct.")
+    return HctResponse(
+        success=False,
+        error=response.text
+        or "Empty response from API. Check that component names and category ids are correct.",
+    )
+
 
 @mcp.tool
 def category_components(category_key: int) -> HctResponse:
@@ -72,7 +79,12 @@ def category_components(category_key: int) -> HctResponse:
     response = requests.get(url, verify=VERIFY_SSL)
     if response.ok and len(response.content):
         return HctResponse(success=True, response=response.json())
-    return HctResponse(success=False, error=response.text or "Empty response from API. Check that component names and category ids are correct.")
+    return HctResponse(
+        success=False,
+        error=response.text
+        or "Empty response from API. Check that component names and category ids are correct.",
+    )
+
 
 @mcp.tool
 def component_details(component_name: str) -> HctResponse:
@@ -81,7 +93,12 @@ def component_details(component_name: str) -> HctResponse:
     response = requests.get(url, verify=VERIFY_SSL)
     if response.ok and len(response.content):
         return HctResponse(success=True, response=response.json())
-    return HctResponse(success=False, error=response.text or "Empty response from API. Check that component names and category ids are correct.")
+    return HctResponse(
+        success=False,
+        error=response.text
+        or "Empty response from API. Check that component names and category ids are correct.",
+    )
+
 
 @mcp.tool
 def component_supported_platforms(component_name: str) -> HctResponse:
@@ -90,7 +107,12 @@ def component_supported_platforms(component_name: str) -> HctResponse:
     response = requests.get(url, verify=VERIFY_SSL)
     if response.ok and len(response.content):
         return HctResponse(success=True, response=response.json())
-    return HctResponse(success=False, error=response.text or "Empty response from API. Check that component names and category ids are correct.")
+    return HctResponse(
+        success=False,
+        error=response.text
+        or "Empty response from API. Check that component names and category ids are correct.",
+    )
+
 
 @mcp.tool
 def component_supported_models(component_name: str) -> HctResponse:
@@ -99,7 +121,12 @@ def component_supported_models(component_name: str) -> HctResponse:
     response = requests.get(url, verify=VERIFY_SSL)
     if response.ok and len(response.content):
         return HctResponse(success=True, response=response.json())
-    return HctResponse(success=False, error=response.text or "Empty response from API. Check that component names and category ids are correct.")
+    return HctResponse(
+        success=False,
+        error=response.text
+        or "Empty response from API. Check that component names and category ids are correct.",
+    )
+
 
 @mcp.tool
 def platforms_by_family() -> HctResponse:
@@ -108,7 +135,12 @@ def platforms_by_family() -> HctResponse:
     response = requests.get(url, verify=VERIFY_SSL)
     if response.ok and len(response.content):
         return HctResponse(success=True, response=response.json())
-    return HctResponse(success=False, error=response.text or "Empty response from API. Check that component names and category ids are correct.")
+    return HctResponse(
+        success=False,
+        error=response.text
+        or "Empty response from API. Check that component names and category ids are correct.",
+    )
+
 
 @mcp.tool
 def components_for_platform(platform: str) -> HctResponse:
@@ -117,7 +149,12 @@ def components_for_platform(platform: str) -> HctResponse:
     response = requests.get(url, verify=VERIFY_SSL)
     if response.ok and len(response.content):
         return HctResponse(success=True, response=response.json())
-    return HctResponse(success=False, error=response.text or "Empty response from API. Check that component names and category ids are correct.")
+    return HctResponse(
+        success=False,
+        error=response.text
+        or "Empty response from API. Check that component names and category ids are correct.",
+    )
+
 
 @mcp.tool
 def platform_hardware_details(platform: str) -> HctResponse:
@@ -127,7 +164,12 @@ def platform_hardware_details(platform: str) -> HctResponse:
     response = requests.post(url, json=payload, verify=VERIFY_SSL)
     if response.ok and len(response.content):
         return HctResponse(success=True, response=response.json())
-    return HctResponse(success=False, error=response.text or "Empty response from API. Check that component names and category ids are correct.")
+    return HctResponse(
+        success=False,
+        error=response.text
+        or "Empty response from API. Check that component names and category ids are correct.",
+    )
+
 
 @mcp.tool
 def platform_information(platform: str) -> HctResponse:
@@ -136,4 +178,8 @@ def platform_information(platform: str) -> HctResponse:
     response = requests.get(url, verify=VERIFY_SSL)
     if response.ok and len(response.content):
         return HctResponse(success=True, response=response.json())
-    return HctResponse(success=False, error=response.text or "Empty response from API. Check that component names and category ids are correct.")
+    return HctResponse(
+        success=False,
+        error=response.text
+        or "Empty response from API. Check that component names and category ids are correct.",
+    )
