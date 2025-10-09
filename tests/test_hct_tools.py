@@ -462,9 +462,14 @@ async def test_platform_hardware_details_request_empty_response():
 async def test_platform_information():
     """Test content and structure of workspace info command."""
     async with Client(mcp) as client:
-        result = await client.call_tool("platform_information", {"platform": "ACX710"})
-        assert result.structured_content.get("success")
-        assert result.structured_content.get("response")
+        with mock.patch.object(
+            jnpr_pathfinder_mcp.server.cli_explorer.requests,
+            "get",
+            return_value=ResponseMock(True, '{"platform": "ACX710"}'),
+        ):
+            result = await client.call_tool("platform_information", {"platform": "ACX710"})
+            assert result.structured_content.get("success")
+            assert result.structured_content.get("response")
 
 
 @pytest.mark.asyncio
