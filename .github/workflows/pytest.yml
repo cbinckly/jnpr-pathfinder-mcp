@@ -6,6 +6,7 @@ on:
       - 'agent/**'
       - 'feature/**'
       - 'bug/**'
+      - 'main'
 
 jobs:
   test:
