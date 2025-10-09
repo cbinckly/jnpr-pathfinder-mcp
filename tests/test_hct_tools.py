@@ -462,7 +462,7 @@ async def test_platform_hardware_details_request_empty_response():
 async def test_platform_information():
     """Test content and structure of workspace info command."""
     async with Client(mcp) as client:
-        result = await client.call_tool("platform_information", {"platform": "EX4000"})
+        result = await client.call_tool("platform_information", {"platform": "ACX710"})
         assert result.structured_content.get("success")
         assert result.structured_content.get("response")
 
