@@ -183,3 +183,7 @@ def platform_information(platform: str) -> HctResponse:
         error=response.text
         or "Empty response from API. Check that component names and category ids are correct.",
     )
+
+if __name__ == '__main__':  # pragma: nocover
+    from jnpr_pathfinder_mcp.helpers import run_cli
+    run_cli(prog="Juniper Hardware Compatibility Tool MCP Server", server=mcp)

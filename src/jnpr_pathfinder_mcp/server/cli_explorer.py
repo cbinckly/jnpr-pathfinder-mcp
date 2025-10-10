@@ -5,6 +5,7 @@ import requests
 from fastmcp import FastMCP  # type: ignore
 from pydantic import BaseModel
 
+
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 file_handler = logging.FileHandler("/tmp/workspace.log")
@@ -66,3 +67,7 @@ def topic_hierarchy() -> CliExplorerResponse:
     if response.ok and len(response.content):
         return CliExplorerResponse(success=True, response=response.json())
     return CliExplorerResponse(success=False, error=response.text or "Empty response from API.")
+
+if __name__ == '__main__':  # pragma: nocover
+    from jnpr_pathfinder_mcp.helpers import run_cli
+    run_cli(prog="Juniper CLI Explorer MCP Server", server=mcp)

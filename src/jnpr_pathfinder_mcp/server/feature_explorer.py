@@ -271,3 +271,7 @@ def product_keys() -> FeatureExplorerResponse:
     if catalog and len(catalog.keys()):
         return FeatureExplorerResponse(success=True, response=catalog)
     return FeatureExplorerResponse(success=False, error=error or "Empty response from API.")
+
+if __name__ == '__main__':  # pragma: nocover
+    from jnpr_pathfinder_mcp.helpers import run_cli
+    run_cli(prog="Juniper Feature Explorer MCP Server", server=mcp)
