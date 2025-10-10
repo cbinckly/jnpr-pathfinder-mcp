@@ -1,6 +1,6 @@
 [project]
 name = "jnpr_pathfinder_mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "An MCP Server for interacting with Juniper's public Pathfinder APIs (https://apps.juniper.net)."
 readme = "README.md"
 authors = [
