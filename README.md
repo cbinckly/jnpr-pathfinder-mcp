@@ -38,15 +38,20 @@ This will expose tools for all supported pathfinder apps over streaming http on 
 
 ### Running a Single Server
 
-To run all three components with a single interface, use 
-[`uv`](https://docs.astral.sh/uv/getting-started/installation/)
-for the simplest approach:
+You can also use `uv` to run just one of the three servers.
 
 ```bash
 $ uv run --with jnpr_pathfinder_mcp -m jnpr_pathfinder_mcp.server.hct
 ```
 
 This will expose tools for the Hardware Compatibility Tool only.
+
+The following individual servers are included:
+
+- `jnpr_pathfinder_mcp.server.hct`
+- `jnpr_pathfinder_mcp.server.feature_explorer`
+- `jnpr_pathfinder_mcp.server.cli_explorer`
+
 
 ## Running with Docker
 
